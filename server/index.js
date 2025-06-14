@@ -26,3 +26,8 @@ app.listen(5000, () => {
   console.log('Сервер запущен на порту 5000');
 });
 //запуск сервера
+
+const authRoutes = require('./routes/auth');
+//подключение логики регистрации
+app.use('/api', authRoutes);
+//маршруты из auth.js будут доступны по пути /api/...
