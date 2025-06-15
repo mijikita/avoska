@@ -15,32 +15,59 @@ if (!login || !password || !full_name || !phone || !email) {
 return res.status(400).json({ message: 'Заполните все поля' });
     }
 
-const hashedPassword = bcrypt.hashSync(password, 8);
-//хэширование пароля
 
-const sql = 'INSERT INTO users (login, password, full_name, phone, email) VALUES (?, ?, ?, ?, ?)';
-const values = [login, hashedPassword, full_name, phone, email];
+
+let roleId = 1;
+if (login === `sklad` && password === `123qwe`){
+    roleId = 2;
+}
+
+
+
+const sql = 'INSERT INTO user (login, password, full_name, phone, email, id_role) VALUES (?, ?, ?, ?, ?, ?)';
+const values = [login, password, full_name, phone, email, roleId];
 //sql запрос для записи в бд
 
 db.query(sql, values, (err, result) => {
-if (err) {
-    console.error('Ошибка регистрации:', err);
-    return res.status(500).json({ message: 'Ошибка сервера' });
-}
-if (password.length < 6) {
-    return res.status(400).json({ message: 'Пароль должен быть от 6 символов' });
-}
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-if (!emailRegex.test(email)) {
-    return res.status(400).json({ message: 'Некорректный email' });
-}
-const phoneRegex = /^[0-9]{10,12}$/;
-if (!phoneRegex.test(phone)) {
-    return res.status(400).json({ message: 'Введите корректный номер телефона' });
-}
+    if (err) {
+        console.error('Ошибка регистрации:', err);
+        return res.status(500).json({ message: 'Ошибка сервера' });
+    }
 
-//обработка ошибок
-res.status(200).json({ message: 'Пользователь зарегистрирован' });
-    });
+const who = roleId === 2 ? 'администратор' : 'пользователь';
+    res.status(200).json({ message: `Регистрация успешна (${who})` });
+});
+
+
 });
 module.exports = router;
+
+router.post('/login', (req, res) => {
+  const { login, password } = req.body;
+
+  if (!login || !password) {
+    return res.status(400).json({ message: 'Заполните все поля' });
+  }
+
+  const sql = 'SELECT * FROM user WHERE login = ?';
+  db.query(sql, [login], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+    if (results.length === 0) return res.status(401).json({ message: 'Пользователь не найден' });
+
+    const user = results[0];
+
+    // 👉 Сравнение как обычных строк (если bcrypt отключён)
+    if (password !== user.password) {
+      return res.status(400).json({ message: 'Неверный пароль' });
+    }
+
+    return res.status(200).json({
+      message: 'Вход выполнен',
+      user: {
+        id: user.id,
+        login: user.login,
+        role: user.id_role
+      }
+    });
+  });
+});
